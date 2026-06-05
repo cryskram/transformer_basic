@@ -1,19 +1,45 @@
 import torch
 import torch.nn as nn
 
-embedding_dim = 64
-head_size = 16
-block_size = 128
+from config import (
+    N_EMBD,
+    BLOCK_SIZE,
+)
 
 
 class Head(nn.Module):
     def __init__(self, head_size):
         super().__init__()
-        self.key = nn.Linear(embedding_dim, head_size, bias=False)
-        self.query = nn.Linear(embedding_dim, head_size, bias=False)
-        self.value = nn.Linear(embedding_dim, head_size, bias=False)
 
-        self.register_buffer("tril", torch.tril(torch.ones(block_size, block_size)))
+        self.key = nn.Linear(
+            N_EMBD,
+            head_size,
+            bias=False,
+        )
+
+        self.query = nn.Linear(
+            N_EMBD,
+            head_size,
+            bias=False,
+        )
+
+        self.value = nn.Linear(
+            N_EMBD,
+            head_size,
+            bias=False,
+        )
+
+        self.register_buffer(
+            "tril",
+            torch.tril(
+                torch.ones(
+                    BLOCK_SIZE,
+                    BLOCK_SIZE,
+                )
+            ),
+        )
+
+        self.head_size = head_size
 
     def forward(self, x):
         B, T, C = x.shape
@@ -22,32 +48,61 @@ class Head(nn.Module):
         q = self.query(x)
         v = self.value(x)
 
-        wei = q @ k.transpose(-2, -1) * (head_size**-0.5)
+        wei = (q @ k.transpose(-2, -1)) * (self.head_size**-0.5)
 
-        wei = wei.masked_fill(self.tril[:T, :T] == 0, float("-inf"))
-        wei = torch.softmax(wei, dim=-1)
+        wei = wei.masked_fill(
+            self.tril[:T, :T] == 0,
+            float("-inf"),
+        )
+
+        wei = torch.softmax(
+            wei,
+            dim=-1,
+        )
 
         out = wei @ v
         return out
 
 
 class MultiHeadAttention(nn.Module):
-
-    def __init__(self, num_heads, head_size):
+    def __init__(
+        self,
+        num_heads,
+        head_size,
+    ):
         super().__init__()
 
         self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
 
-        self.proj = nn.Linear(num_heads * head_size, embedding_dim)
+        self.proj = nn.Linear(
+            num_heads * head_size,
+            N_EMBD,
+        )
+
+    def forward(self, x):
+        out = torch.cat(
+            [h(x) for h in self.heads],
+            dim=-1,
+        )
+
+        out = self.proj(out)
+
+        return out
 
 
 class FeedForward(nn.Module):
-    def __init__(self, embedding_dim):
+    def __init__(self, n_embd):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(embedding_dim, 4 * embedding_dim),
+            nn.Linear(
+                n_embd,
+                4 * n_embd,
+            ),
             nn.ReLU(),
-            nn.Linear(4 * embedding_dim, embedding_dim),
+            nn.Linear(
+                4 * n_embd,
+                n_embd,
+            ),
         )
 
     def forward(self, x):
