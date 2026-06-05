@@ -8,6 +8,7 @@ from config import (
     N_EMBD,
     N_HEADS,
     N_LAYERS,
+    VOCAB_SIZE,
 )
 
 
@@ -121,3 +122,8 @@ class GPTLanguageModel(nn.Module):
             )
 
         return idx
+
+
+model = GPTLanguageModel(VOCAB_SIZE)
+
+print(sum(p.numel() for p in model.parameters()) / 1e6, "M parameters")
