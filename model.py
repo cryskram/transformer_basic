@@ -87,11 +87,7 @@ class GPTLanguageModel(nn.Module):
         return logits, loss
 
     @torch.no_grad()
-    def generate(
-        self,
-        idx,
-        max_new_tokens,
-    ):
+    def generate(self, idx, max_new_tokens, temperature=1.0):
         for _ in range(max_new_tokens):
 
             idx_cond = idx[
@@ -102,6 +98,7 @@ class GPTLanguageModel(nn.Module):
             logits, _ = self(idx_cond)
 
             logits = logits[:, -1, :]
+            logits = logits / temperature
 
             probs = torch.softmax(
                 logits,

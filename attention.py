@@ -29,6 +29,8 @@ class Head(nn.Module):
             bias=False,
         )
 
+        self.dropout = nn.Dropout(0.2)
+
         self.register_buffer(
             "tril",
             torch.tril(
@@ -60,6 +62,8 @@ class Head(nn.Module):
             dim=-1,
         )
 
+        wei = self.dropout(wei)
+
         out = wei @ v
         return out
 
@@ -78,6 +82,7 @@ class MultiHeadAttention(nn.Module):
             num_heads * head_size,
             N_EMBD,
         )
+        self.dropout = nn.Dropout(0.2)
 
     def forward(self, x):
         out = torch.cat(
@@ -86,6 +91,7 @@ class MultiHeadAttention(nn.Module):
         )
 
         out = self.proj(out)
+        out = self.dropout(out)
 
         return out
 
@@ -103,6 +109,7 @@ class FeedForward(nn.Module):
                 4 * n_embd,
                 n_embd,
             ),
+            nn.Dropout(0.2),
         )
 
     def forward(self, x):
